@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triathlon Manager - Run</title>
+    <style>
+        /* スタイルシート (見た目の設定) */
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --border-color: #e5e7eb;
+            --red: #ef4444;
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --gray: #9ca3af;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #111827; /* 暗い背景 */
+            height: 100vh;
+            overflow: hidden; /* 全体スクロール禁止 */
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            height: 40px;
+            background-color: #1f2937;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* 横並びコンテナ */
+        #athletes-container {
+            flex: 1;
+            display: flex;
+            overflow-x: auto; /* 横スクロール許可 */
+            overflow-y: hidden;
+            background-color: var(--bg-color);
+        }
+
+        /* 個別のストップウォッチカード */
+        .stopwatch-card {
+            flex: 0 0 320px; /* 幅固定 */
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            position: relative;
+            box-sizing: border-box;
+            height: 100%;
+        }
+
+        /* 削除ボタン */
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: var(--border-color);
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .delete-btn:hover { color: var(--red); }
+
+        /* 名前入力 */
+        .name-input {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            border: none;
+            border-bottom: 2px solid var(--border-color);
+            width: 80%;
+            margin: 0 auto 10px auto;
+            padding: 4px;
+            outline: none;
+        }
+        .name-input:focus { border-color: var(--blue); }
+
+        /* タイム表示エリア */
+        .time-display-area {
+            background-color: #f9fafb;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 12px;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .main-time-label { font-size: 10px; color: var(--gray); font-weight: bold; }
+        .main-time {
+            font-family: monospace;
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--text-main);
+            letter-spacing: 1px;
+            margin: 4px 0 12px 0;
+        }
+
+        .sub-times {
+            display: flex;
+            gap: 8px;
+        }
+
+        .sub-time-box {
+            flex: 1;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 4px;
+        }
+        .sub-label { font-size: 9px; font-weight: bold; text-transform: uppercase; }
+        .sub-time { font-family: monospace; font-size: 18px; font-weight: bold; }
+
+        .text-blue { color: #1e40af; }
+        .text-green { color: #166534; }
+
+        /* ボタンエリア */
+        .controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+        .row-btns { display: flex; gap: 8px; height: 50px; }
+        
+        button {
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #d1d5db; cursor: not-allowed; }
+
+        .btn-start { background-color: var(--green); color: white; flex: 1; }
+        .btn-stop { background-color: var(--red); color: white; flex: 1; }
+        .btn-lap { background-color: var(--blue); color: white; flex: 1; }
+        .btn-reset { background-color: #e5e7eb; color: #4b5563; width: 100%; padding: 8px; }
+
+        /* ラップリスト */
+        .lap-list-container {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
+        th { background-color: #f3f4f6; padding: 6px; font-size: 11px; color: var(--gray); position: sticky; top: 0; }
+        td { padding: 4px; border-bottom: 1px solid #e5e7eb; color: var(--text-main); }
+        .mono { font-family: monospace; }
+        .lap-split { font-weight: bold; color: #1e40af; }
+
+        /* 追加ボタンエリア */
+        #add-btn-area {
+            flex: 0 0 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e5e7eb;
+            border-left: 1px solid #d1d5db;
+        }
+        .add-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: white;
+            color: var(--blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .add-circle:hover { background-color: #eff6ff; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    Triathlon Manager - Run (Vanilla JS版)
+</header>
+
+<div id="athletes-container">
+    <div id="add-btn-area">
+        <div class="add-circle" onclick="addAthlete()">+</div>
+    </div>
+</div>
+
+<script>
+    // --- ロジック部分 ---
+
+    let athletes = [];
+    let nextId = 1;
+
+    // 時間フォーマット (mm:ss.ms)
+    function formatTime(ms) {
+        if (ms === 0) return "00:00.00";
+        const minutes = Math.floor(ms / 60000);
+        const seconds = Math.floor((ms % 60000) / 1000);
+        const milliseconds = Math.floor((ms % 1000) / 10);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+    }
+
+    // ストップウォッチクラス
+    class Stopwatch {
+        constructor(id) {
+            this.id = id;
+            this.startTime = 0; // 開始時刻
+            this.elapsedSaved = 0; // 停止時の経過時間保存
+            this.isRunning = false;
+            this.animationFrame = null;
+            
+            this.laps = [];
+            this.lastLapTimeValue = 0; // 直前のラップタイム
+            this.currentLapStart = 0; // 現在のラップの開始点（全体時間ベース）
+
+            // DOM要素の生成
+            this.element = document.createElement('div');
+            this.element.className = 'stopwatch-card';
+            this.element.id = `athlete-${id}`;
+            this.render();
+            
+            // DOMへの参照を取得
+            this.totalTimeDisplay = this.element.querySelector('.main-time');
+            this.currentLapDisplay = this.element.querySelector('.current-lap');
+            this.lastLapDisplay = this.element.querySelector('.last-lap');
+            this.startStopBtn = this.element.querySelector('.btn-toggle');
+            this.lapBtn = this.element.querySelector('.btn-lap');
+            this.tbody = this.element.querySelector('tbody');
+        }
+
+        // HTML生成
+        render() {
+            this.element.innerHTML = `
+                <button class="delete-btn" onclick="removeAthlete(${this.id})">×</button>
+                <input type="text" class="name-input" placeholder="氏名" value="選手 ${this.id}">
+                
+                <div class="time-display-area">
+                    <div class="main-time-label">TOTAL TIME</div>
+                    <div class="main-time">00:00.00</div>
+                    <div class="sub-times">
+                        <div class="sub-time-box">
+                            <div class="sub-label text-blue">Current Lap</div>
+                            <div class="sub-time current-lap text-blue">00:00.00</div>
+                        </div>
+                        <div class="sub-time-box">
+                            <div class="sub-label text-green">Last Lap</div>
+                            <div class="sub-time last-lap text-green">00:00.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <div class="row-btns">
+                        <button class="btn-toggle btn-start" onclick="toggleTimer(${this.id})">START</button>
+                        <button class="btn-lap" onclick="recordLap(${this.id})" disabled>LAP</button>
+                    </div>
+                    <button class="btn-reset" onclick="resetTimer(${this.id})">RESET</button>
+                </div>
+
+                <div class="lap-list-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>SPLIT</th>
+                                <th>TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        update() {
+            const now = Date.now();
+            const totalTime = this.elapsedSaved + (this.isRunning ? (now - this.startTime) : 0);
+            
+            // メイン表示更新
+            this.totalTimeDisplay.textContent = formatTime(totalTime);
+
+            // 現在のラップ計算 (Total - 前回のラップまでのTotal)
+            const currentLapTime = totalTime - this.currentLapStart;
+            this.currentLapDisplay.textContent = formatTime(currentLapTime);
+
+            if (this.isRunning) {
+                this.animationFrame = requestAnimationFrame(() => this.update());
+            }
+        }
+
+        start() {
+            this.isRunning = true;
+            this.startTime = Date.now();
+            this.startStopBtn.textContent = "STOP";
+            this.startStopBtn.className = "btn-toggle btn-stop";
+            this.lapBtn.disabled = false;
+            this.update();
+        }
+
+        stop() {
+            this.isRunning = false;
+            this.elapsedSaved += Date.now() - this.startTime;
+            cancelAnimationFrame(this.animationFrame);
+            this.startStopBtn.textContent = "START";
+            this.startStopBtn.className = "btn-toggle btn-start";
+            this.lapBtn.disabled = true;
+        }
+
+        lap() {
+            // 現在のトータル時間を計算
+            const now = Date.now();
+            const totalTime = this.elapsedSaved + (now - this.startTime);
+            
+            // 今回のラップタイム (スプリット)
+            const splitTime = totalTime - this.currentLapStart;
+
+            // データを保存
+            const lapData = {
+                count: this.laps.length + 1,
+                split: splitTime,
+                total: totalTime
+            };
+            this.laps.unshift(lapData); // 先頭に追加
+
+            // UI更新
+            // 1. 直前のラップ表示を更新
+            this.lastLapTimeValue = splitTime;
+            this.lastLapDisplay.textContent = formatTime(splitTime);
+
+            // 2. 次のラップの開始基準点を更新
+            this.currentLapStart = totalTime;
+
+            // 3. テーブルに行を追加
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="mono" style="color:#9ca3af;">${lapData.count}</td>
+                <td class="mono lap-split">${formatTime(lapData.split)}</td>
+                <td class="mono" style="color:#6b7280;">${formatTime(lapData.total)}</td>
+            `;
+            this.tbody.prepend(row);
+        }
+
+        reset() {
+            this.stop();
+            this.elapsedSaved = 0;
+            this.startTime = 0;
+            this.laps = [];
+            this.currentLapStart = 0;
+            this.lastLapTimeValue = 0;
+
+            // 表示リセット
+            this.totalTimeDisplay.textContent = "00:00.00";
+            this.currentLapDisplay.textContent = "00:00.00";
+            this.lastLapDisplay.textContent = "00:00.00";
+            this.tbody.innerHTML = "";
+        }
+    }
+
+    // --- グローバル管理関数 ---
+
+    // IDからインスタンスを探す
+    function getAthlete(id) {
+        return athletes.find(a => a.id === id);
+    }
+
+    function addAthlete() {
+        const stopwatch = new Stopwatch(nextId);
+        athletes.push(stopwatch);
+        
+        // "追加ボタン"の直前に挿入
+        const container = document.getElementById('athletes-container');
+        const btnArea = document.getElementById('add-btn-area');
+        container.insertBefore(stopwatch.element, btnArea);
+        
+        nextId++;
+    }
+
+    function removeAthlete(id) {
+        if (!confirm("削除しますか？")) return;
+        
+        const index = athletes.findIndex(a => a.id === id);
+        if (index > -1) {
+            athletes[index].element.remove();
+            athletes.splice(index, 1);
+        }
+    }
+
+    function toggleTimer(id) {
+        const s = getAthlete(id);
+        if (s.isRunning) s.stop();
+        else s.start();
+    }
+
+    function recordLap(id) {
+        getAthlete(id).lap();
+    }
+
+    function resetTimer(id) {
+        if(confirm("タイムをリセットしますか？")) {
+            getAthlete(id).reset();
+        }
+    }
+
+    // 初期状態で3人追加
+    window.onload = () => {
+        addAthlete();
+        addAthlete();
+        addAthlete();
+    };
+
+</script>
+
+</body>
+</html>
