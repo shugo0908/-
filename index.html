@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Triathlon Manager - Run</title>
     <style>
-        /* スタイルシート (見た目の設定) */
+        /* --- デザイン設定 --- */
         :root {
             --bg-color: #f3f4f6;
             --card-bg: #ffffff;
@@ -21,9 +21,9 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #111827; /* 暗い背景 */
+            background-color: #111827;
             height: 100vh;
-            overflow: hidden; /* 全体スクロール禁止 */
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
@@ -37,20 +37,23 @@
             padding: 0 16px;
             font-size: 14px;
             font-weight: bold;
+            flex-shrink: 0; /* ヘッダーが潰れないように */
         }
 
         /* 横並びコンテナ */
         #athletes-container {
             flex: 1;
             display: flex;
-            overflow-x: auto; /* 横スクロール許可 */
+            overflow-x: auto;
             overflow-y: hidden;
             background-color: var(--bg-color);
+            /* 下部のバーの分だけ余白を空ける */
+            padding-bottom: 80px; 
         }
 
         /* 個別のストップウォッチカード */
         .stopwatch-card {
-            flex: 0 0 320px; /* 幅固定 */
+            flex: 0 0 320px;
             background-color: var(--card-bg);
             border-right: 1px solid var(--border-color);
             display: flex;
@@ -61,7 +64,6 @@
             height: 100%;
         }
 
-        /* 削除ボタン */
         .delete-btn {
             position: absolute;
             top: 8px;
@@ -74,7 +76,6 @@
         }
         .delete-btn:hover { color: var(--red); }
 
-        /* 名前入力 */
         .name-input {
             font-size: 20px;
             font-weight: bold;
@@ -88,7 +89,6 @@
         }
         .name-input:focus { border-color: var(--blue); }
 
-        /* タイム表示エリア */
         .time-display-area {
             background-color: #f9fafb;
             border-radius: 8px;
@@ -108,11 +108,7 @@
             margin: 4px 0 12px 0;
         }
 
-        .sub-times {
-            display: flex;
-            gap: 8px;
-        }
-
+        .sub-times { display: flex; gap: 8px; }
         .sub-time-box {
             flex: 1;
             background: white;
@@ -126,9 +122,8 @@
         .text-blue { color: #1e40af; }
         .text-green { color: #166534; }
 
-        /* ボタンエリア */
         .controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-        .row-btns { display: flex; gap: 8px; height: 50px; }
+        .row-btns { display: flex; gap: 8px; height: 40px; } /* 個別ボタンは少し小さく */
         
         button {
             border: none;
@@ -146,7 +141,6 @@
         .btn-lap { background-color: var(--blue); color: white; flex: 1; }
         .btn-reset { background-color: #e5e7eb; color: #4b5563; width: 100%; padding: 8px; }
 
-        /* ラップリスト */
         .lap-list-container {
             flex: 1;
             overflow-y: auto;
@@ -160,7 +154,6 @@
         .mono { font-family: monospace; }
         .lap-split { font-weight: bold; color: #1e40af; }
 
-        /* 追加ボタンエリア */
         #add-btn-area {
             flex: 0 0 100px;
             display: flex;
@@ -170,26 +163,53 @@
             border-left: 1px solid #d1d5db;
         }
         .add-circle {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: white;
-            color: var(--blue);
+            width: 60px; height: 60px; border-radius: 50%;
+            background-color: white; color: var(--blue);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        /* --- 新機能: 下部の一括操作バー --- */
+        #global-controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background-color: #1f2937;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 10px;
+            box-sizing: border-box;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+        
+        .global-btn {
+            height: 50px;
+            flex: 1;
+            margin: 0 5px;
+            font-size: 16px;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
+            flex-direction: column;
         }
-        .add-circle:hover { background-color: #eff6ff; }
+        .global-btn span { font-size: 10px; font-weight: normal; margin-top: 2px; opacity: 0.8; }
+
+        .g-start { background-color: #16a34a; } /* 濃い緑 */
+        .g-lap { background-color: #2563eb; }   /* 濃い青 */
+        .g-stop { background-color: #dc2626; }   /* 濃い赤 */
 
     </style>
 </head>
 <body>
 
 <header>
-    Triathlon Manager - Run (Vanilla JS版)
+    Triathlon Manager - Run
 </header>
 
 <div id="athletes-container">
@@ -198,13 +218,22 @@
     </div>
 </div>
 
-<script>
-    // --- ロジック部分 ---
+<div id="global-controls">
+    <button class="global-btn g-start" onclick="startAll()">
+        START ALL <span>一括スタート</span>
+    </button>
+    <button class="global-btn g-lap" onclick="lapAll()">
+        LAP ALL <span>一括ラップ</span>
+    </button>
+    <button class="global-btn g-stop" onclick="stopAll()">
+        STOP ALL <span>一括ストップ</span>
+    </button>
+</div>
 
+<script>
     let athletes = [];
     let nextId = 1;
 
-    // 時間フォーマット (mm:ss.ms)
     function formatTime(ms) {
         if (ms === 0) return "00:00.00";
         const minutes = Math.floor(ms / 60000);
@@ -213,26 +242,22 @@
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
     }
 
-    // ストップウォッチクラス
     class Stopwatch {
         constructor(id) {
             this.id = id;
-            this.startTime = 0; // 開始時刻
-            this.elapsedSaved = 0; // 停止時の経過時間保存
+            this.startTime = 0; 
+            this.elapsedSaved = 0; 
             this.isRunning = false;
             this.animationFrame = null;
             
             this.laps = [];
-            this.lastLapTimeValue = 0; // 直前のラップタイム
-            this.currentLapStart = 0; // 現在のラップの開始点（全体時間ベース）
+            this.currentLapStart = 0; 
 
-            // DOM要素の生成
             this.element = document.createElement('div');
             this.element.className = 'stopwatch-card';
             this.element.id = `athlete-${id}`;
             this.render();
             
-            // DOMへの参照を取得
             this.totalTimeDisplay = this.element.querySelector('.main-time');
             this.currentLapDisplay = this.element.querySelector('.current-lap');
             this.lastLapDisplay = this.element.querySelector('.last-lap');
@@ -241,7 +266,6 @@
             this.tbody = this.element.querySelector('tbody');
         }
 
-        // HTML生成
         render() {
             this.element.innerHTML = `
                 <button class="delete-btn" onclick="removeAthlete(${this.id})">×</button>
@@ -288,11 +312,7 @@
         update() {
             const now = Date.now();
             const totalTime = this.elapsedSaved + (this.isRunning ? (now - this.startTime) : 0);
-            
-            // メイン表示更新
             this.totalTimeDisplay.textContent = formatTime(totalTime);
-
-            // 現在のラップ計算 (Total - 前回のラップまでのTotal)
             const currentLapTime = totalTime - this.currentLapStart;
             this.currentLapDisplay.textContent = formatTime(currentLapTime);
 
@@ -302,6 +322,7 @@
         }
 
         start() {
+            if (this.isRunning) return; // 既に動いていたら何もしない
             this.isRunning = true;
             this.startTime = Date.now();
             this.startStopBtn.textContent = "STOP";
@@ -311,6 +332,7 @@
         }
 
         stop() {
+            if (!this.isRunning) return; // 既に止まっていたら何もしない
             this.isRunning = false;
             this.elapsedSaved += Date.now() - this.startTime;
             cancelAnimationFrame(this.animationFrame);
@@ -320,30 +342,21 @@
         }
 
         lap() {
-            // 現在のトータル時間を計算
+            if (!this.isRunning) return; // 止まっているときはラップ不可
             const now = Date.now();
             const totalTime = this.elapsedSaved + (now - this.startTime);
-            
-            // 今回のラップタイム (スプリット)
             const splitTime = totalTime - this.currentLapStart;
 
-            // データを保存
             const lapData = {
                 count: this.laps.length + 1,
                 split: splitTime,
                 total: totalTime
             };
-            this.laps.unshift(lapData); // 先頭に追加
+            this.laps.unshift(lapData);
 
-            // UI更新
-            // 1. 直前のラップ表示を更新
-            this.lastLapTimeValue = splitTime;
             this.lastLapDisplay.textContent = formatTime(splitTime);
-
-            // 2. 次のラップの開始基準点を更新
             this.currentLapStart = totalTime;
 
-            // 3. テーブルに行を追加
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="mono" style="color:#9ca3af;">${lapData.count}</td>
@@ -359,9 +372,6 @@
             this.startTime = 0;
             this.laps = [];
             this.currentLapStart = 0;
-            this.lastLapTimeValue = 0;
-
-            // 表示リセット
             this.totalTimeDisplay.textContent = "00:00.00";
             this.currentLapDisplay.textContent = "00:00.00";
             this.lastLapDisplay.textContent = "00:00.00";
@@ -371,26 +381,19 @@
 
     // --- グローバル管理関数 ---
 
-    // IDからインスタンスを探す
-    function getAthlete(id) {
-        return athletes.find(a => a.id === id);
-    }
+    function getAthlete(id) { return athletes.find(a => a.id === id); }
 
     function addAthlete() {
         const stopwatch = new Stopwatch(nextId);
         athletes.push(stopwatch);
-        
-        // "追加ボタン"の直前に挿入
         const container = document.getElementById('athletes-container');
         const btnArea = document.getElementById('add-btn-area');
         container.insertBefore(stopwatch.element, btnArea);
-        
         nextId++;
     }
 
     function removeAthlete(id) {
         if (!confirm("削除しますか？")) return;
-        
         const index = athletes.findIndex(a => a.id === id);
         if (index > -1) {
             athletes[index].element.remove();
@@ -400,27 +403,31 @@
 
     function toggleTimer(id) {
         const s = getAthlete(id);
-        if (s.isRunning) s.stop();
-        else s.start();
+        if (s.isRunning) s.stop(); else s.start();
+    }
+    function recordLap(id) { getAthlete(id).lap(); }
+    function resetTimer(id) { if(confirm("リセットしますか？")) getAthlete(id).reset(); }
+
+    // --- 一括操作機能 ---
+    
+    function startAll() {
+        athletes.forEach(athlete => athlete.start());
     }
 
-    function recordLap(id) {
-        getAthlete(id).lap();
+    function stopAll() {
+        athletes.forEach(athlete => athlete.stop());
     }
 
-    function resetTimer(id) {
-        if(confirm("タイムをリセットしますか？")) {
-            getAthlete(id).reset();
-        }
+    function lapAll() {
+        athletes.forEach(athlete => athlete.lap());
     }
 
-    // 初期状態で3人追加
+    // 初期化
     window.onload = () => {
         addAthlete();
         addAthlete();
         addAthlete();
     };
-
 </script>
 
 </body>
