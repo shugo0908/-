@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Triathlon Manager - Run</title>
+    <title>Triathlon Manager - Run v3</title>
     <style>
         /* --- デザイン設定 --- */
         :root {
@@ -15,6 +15,8 @@
             --green: #22c55e;
             --blue: #3b82f6;
             --gray: #9ca3af;
+            --purple: #8b5cf6;
+            --orange: #f97316; /* 終了ボタン用 */
         }
 
         body {
@@ -34,24 +36,34 @@
             color: white;
             display: flex;
             align-items: center;
+            justify-content: space-between; /* タイトルと戻るボタン用 */
             padding: 0 16px;
             font-size: 14px;
             font-weight: bold;
-            flex-shrink: 0; /* ヘッダーが潰れないように */
+            flex-shrink: 0;
         }
 
-        /* 横並びコンテナ */
+        /* 画面切り替え用クラス */
+        .screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        .hidden { display: none !important; }
+
+        /* --- 測定画面のスタイル --- */
         #athletes-container {
             flex: 1;
             display: flex;
             overflow-x: auto;
             overflow-y: hidden;
             background-color: var(--bg-color);
-            /* 下部のバーの分だけ余白を空ける */
             padding-bottom: 80px; 
         }
 
-        /* 個別のストップウォッチカード */
         .stopwatch-card {
             flex: 0 0 320px;
             background-color: var(--card-bg);
@@ -65,73 +77,46 @@
         }
 
         .delete-btn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: none;
-            border: none;
-            color: var(--border-color);
-            cursor: pointer;
-            font-size: 18px;
+            position: absolute; top: 8px; right: 8px; background: none; border: none;
+            color: var(--border-color); cursor: pointer; font-size: 18px;
         }
         .delete-btn:hover { color: var(--red); }
 
         .name-input {
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            border: none;
-            border-bottom: 2px solid var(--border-color);
-            width: 80%;
-            margin: 0 auto 10px auto;
-            padding: 4px;
-            outline: none;
+            font-size: 20px; font-weight: bold; text-align: center; border: none;
+            border-bottom: 2px solid var(--border-color); width: 80%;
+            margin: 0 auto 10px auto; padding: 4px; outline: none;
         }
         .name-input:focus { border-color: var(--blue); }
 
         .time-display-area {
-            background-color: #f9fafb;
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
-            margin-bottom: 12px;
+            background-color: #f9fafb; border-radius: 8px; padding: 10px;
+            text-align: center; margin-bottom: 12px;
             box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
         }
 
         .main-time-label { font-size: 10px; color: var(--gray); font-weight: bold; }
         .main-time {
-            font-family: monospace;
-            font-size: 36px;
-            font-weight: bold;
-            color: var(--text-main);
-            letter-spacing: 1px;
-            margin: 4px 0 12px 0;
+            font-family: monospace; font-size: 36px; font-weight: bold;
+            color: var(--text-main); letter-spacing: 1px; margin: 4px 0 12px 0;
         }
 
         .sub-times { display: flex; gap: 8px; }
         .sub-time-box {
-            flex: 1;
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 4px;
+            flex: 1; background: white; border: 1px solid var(--border-color);
+            border-radius: 4px; padding: 4px;
         }
         .sub-label { font-size: 9px; font-weight: bold; text-transform: uppercase; }
         .sub-time { font-family: monospace; font-size: 18px; font-weight: bold; }
 
-        .text-blue { color: #1e40af; }
-        .text-green { color: #166534; }
+        .text-blue { color: #1e40af; } .text-green { color: #166534; }
 
         .controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-        .row-btns { display: flex; gap: 8px; height: 40px; } /* 個別ボタンは少し小さく */
+        .row-btns { display: flex; gap: 8px; height: 40px; }
         
         button {
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 14px;
-            transition: opacity 0.2s;
+            border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+            font-size: 14px; transition: opacity 0.2s;
         }
         button:active { transform: scale(0.98); }
         button:disabled { background-color: #d1d5db; cursor: not-allowed; }
@@ -142,11 +127,8 @@
         .btn-reset { background-color: #e5e7eb; color: #4b5563; width: 100%; padding: 8px; }
 
         .lap-list-container {
-            flex: 1;
-            overflow-y: auto;
-            background-color: #f9fafb;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
+            flex: 1; overflow-y: auto; background-color: #f9fafb;
+            border: 1px solid var(--border-color); border-radius: 4px;
         }
         table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
         th { background-color: #f3f4f6; padding: 6px; font-size: 11px; color: var(--gray); position: sticky; top: 0; }
@@ -155,79 +137,112 @@
         .lap-split { font-weight: bold; color: #1e40af; }
 
         #add-btn-area {
-            flex: 0 0 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #e5e7eb;
-            border-left: 1px solid #d1d5db;
+            flex: 0 0 100px; display: flex; align-items: center; justify-content: center;
+            background-color: #e5e7eb; border-left: 1px solid #d1d5db;
         }
         .add-circle {
-            width: 60px; height: 60px; border-radius: 50%;
-            background-color: white; color: var(--blue);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
+            width: 60px; height: 60px; border-radius: 50%; background-color: white;
+            color: var(--blue); display: flex; align-items: center; justify-content: center;
+            font-size: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); cursor: pointer;
         }
 
-        /* --- 新機能: 下部の一括操作バー --- */
+        /* --- 一括操作バー --- */
         #global-controls {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 70px;
-            background-color: #1f2937;
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            padding: 0 10px;
-            box-sizing: border-box;
-            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.2);
-            z-index: 100;
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 70px;
+            background-color: #1f2937; display: flex; align-items: center;
+            justify-content: space-around; padding: 0 10px; box-sizing: border-box;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.2); z-index: 100;
         }
         
         .global-btn {
-            height: 50px;
-            flex: 1;
-            margin: 0 5px;
-            font-size: 16px;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
+            height: 50px; flex: 1; margin: 0 5px; font-size: 16px; color: white;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
         }
         .global-btn span { font-size: 10px; font-weight: normal; margin-top: 2px; opacity: 0.8; }
 
-        .g-start { background-color: #16a34a; } /* 濃い緑 */
-        .g-lap { background-color: #2563eb; }   /* 濃い青 */
-        .g-stop { background-color: #dc2626; }   /* 濃い赤 */
+        .g-start { background-color: #16a34a; }
+        .g-lap { background-color: #2563eb; }
+        .g-stop { background-color: #dc2626; }
+        .g-finish { background-color: var(--orange); } /* 測定終了ボタン */
+
+        /* --- 編集画面のスタイル --- */
+        #edit-screen {
+            background-color: var(--bg-color);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .edit-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        h2 { margin-top: 0; color: var(--text-main); font-size: 18px; }
+        p { color: #666; font-size: 13px; margin-bottom: 10px; }
+
+        textarea {
+            flex: 1;
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        .edit-actions {
+            display: flex;
+            gap: 10px;
+            height: 50px;
+        }
+
+        .btn-copy { background-color: var(--purple); color: white; flex: 2; font-size: 16px; }
+        .btn-back { background-color: #6b7280; color: white; flex: 1; font-size: 16px; }
 
     </style>
 </head>
 <body>
 
 <header>
-    Triathlon Manager - Run
+    <span>Triathlon Manager - Run</span>
 </header>
 
-<div id="athletes-container">
-    <div id="add-btn-area">
-        <div class="add-circle" onclick="addAthlete()">+</div>
+<div id="measurement-screen" class="screen">
+    <div id="athletes-container">
+        <div id="add-btn-area">
+            <div class="add-circle" onclick="addAthlete()">+</div>
+        </div>
+    </div>
+
+    <div id="global-controls">
+        <button class="global-btn g-start" onclick="startAll()">START<span>一括開始</span></button>
+        <button class="global-btn g-lap" onclick="lapAll()">LAP<span>一括ラップ</span></button>
+        <button class="global-btn g-stop" onclick="stopAll()">STOP<span>一括停止</span></button>
+        <button class="global-btn g-finish" onclick="finishMeasurement()">FINISH<span>測定終了</span></button>
     </div>
 </div>
 
-<div id="global-controls">
-    <button class="global-btn g-start" onclick="startAll()">
-        START ALL <span>一括スタート</span>
-    </button>
-    <button class="global-btn g-lap" onclick="lapAll()">
-        LAP ALL <span>一括ラップ</span>
-    </button>
-    <button class="global-btn g-stop" onclick="stopAll()">
-        STOP ALL <span>一括ストップ</span>
-    </button>
+<div id="edit-screen" class="screen hidden">
+    <div class="edit-container">
+        <h2>結果の編集と書き出し</h2>
+        <p>テキストは自由に編集できます。編集後にコピーボタンを押してください。</p>
+        <textarea id="result-textarea"></textarea>
+        <div class="edit-actions">
+            <button class="btn-back" onclick="backToMeasurement()">戻る</button>
+            <button class="btn-copy" onclick="copyResults()">クリップボードにコピー</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -249,7 +264,6 @@
             this.elapsedSaved = 0; 
             this.isRunning = false;
             this.animationFrame = null;
-            
             this.laps = [];
             this.currentLapStart = 0; 
 
@@ -258,6 +272,8 @@
             this.element.id = `athlete-${id}`;
             this.render();
             
+            // DOM要素取得
+            this.nameInput = this.element.querySelector('.name-input');
             this.totalTimeDisplay = this.element.querySelector('.main-time');
             this.currentLapDisplay = this.element.querySelector('.current-lap');
             this.lastLapDisplay = this.element.querySelector('.last-lap');
@@ -315,14 +331,13 @@
             this.totalTimeDisplay.textContent = formatTime(totalTime);
             const currentLapTime = totalTime - this.currentLapStart;
             this.currentLapDisplay.textContent = formatTime(currentLapTime);
-
             if (this.isRunning) {
                 this.animationFrame = requestAnimationFrame(() => this.update());
             }
         }
 
         start() {
-            if (this.isRunning) return; // 既に動いていたら何もしない
+            if (this.isRunning) return; 
             this.isRunning = true;
             this.startTime = Date.now();
             this.startStopBtn.textContent = "STOP";
@@ -332,7 +347,7 @@
         }
 
         stop() {
-            if (!this.isRunning) return; // 既に止まっていたら何もしない
+            if (!this.isRunning) return;
             this.isRunning = false;
             this.elapsedSaved += Date.now() - this.startTime;
             cancelAnimationFrame(this.animationFrame);
@@ -342,7 +357,7 @@
         }
 
         lap() {
-            if (!this.isRunning) return; // 止まっているときはラップ不可
+            if (!this.isRunning) return;
             const now = Date.now();
             const totalTime = this.elapsedSaved + (now - this.startTime);
             const splitTime = totalTime - this.currentLapStart;
@@ -377,6 +392,10 @@
             this.lastLapDisplay.textContent = "00:00.00";
             this.tbody.innerHTML = "";
         }
+
+        getName() {
+            return this.nameInput.value || `選手 ${this.id}`;
+        }
     }
 
     // --- グローバル管理関数 ---
@@ -408,18 +427,65 @@
     function recordLap(id) { getAthlete(id).lap(); }
     function resetTimer(id) { if(confirm("リセットしますか？")) getAthlete(id).reset(); }
 
-    // --- 一括操作機能 ---
-    
-    function startAll() {
-        athletes.forEach(athlete => athlete.start());
+    function startAll() { athletes.forEach(a => a.start()); }
+    function stopAll() { athletes.forEach(a => a.stop()); }
+    function lapAll() { athletes.forEach(a => a.lap()); }
+
+    // --- 画面遷移ロジック ---
+
+    // 1. 測定終了ボタン
+    function finishMeasurement() {
+        if(confirm("測定を終了して、結果編集画面へ移動しますか？\n（動いているタイマーは全て停止します）")) {
+            // 全停止
+            stopAll();
+            
+            // 画面切り替え
+            document.getElementById('measurement-screen').classList.add('hidden');
+            document.getElementById('edit-screen').classList.remove('hidden');
+            
+            // 結果をテキストエリアに生成
+            generateResultText();
+        }
     }
 
-    function stopAll() {
-        athletes.forEach(athlete => athlete.stop());
+    // 2. 戻るボタン
+    function backToMeasurement() {
+        document.getElementById('edit-screen').classList.add('hidden');
+        document.getElementById('measurement-screen').classList.remove('hidden');
     }
 
-    function lapAll() {
-        athletes.forEach(athlete => athlete.lap());
+    // 3. テキスト生成
+    function generateResultText() {
+        let text = "【ラン計測結果】\n\n";
+        
+        athletes.forEach(a => {
+            text += `■ ${a.getName()}\n`;
+            const sortedLaps = [...a.laps].reverse();
+            
+            if (sortedLaps.length === 0) {
+                text += " データなし\n";
+            } else {
+                sortedLaps.forEach(lap => {
+                    text += `${lap.count}lap: ${formatTime(lap.split)} (Total ${formatTime(lap.total)})\n`;
+                });
+            }
+            text += "\n";
+        });
+
+        // テキストエリアに挿入
+        document.getElementById('result-textarea').value = text;
+    }
+
+    // 4. コピー実行
+    async function copyResults() {
+        const textArea = document.getElementById('result-textarea');
+        try {
+            // テキストエリアの内容をクリップボードへ
+            await navigator.clipboard.writeText(textArea.value);
+            alert("コピーしました！");
+        } catch (err) {
+            alert("コピーに失敗しました...");
+        }
     }
 
     // 初期化
