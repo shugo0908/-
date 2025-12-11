@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Triathlon Manager - Run v3</title>
+    <title>Triathlon Manager - Run v4</title>
     <style>
         /* --- デザイン設定 --- */
         :root {
@@ -16,64 +16,38 @@
             --blue: #3b82f6;
             --gray: #9ca3af;
             --purple: #8b5cf6;
-            --orange: #f97316; /* 終了ボタン用 */
+            --orange: #f97316;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #111827;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            margin: 0; padding: 0; background-color: #111827;
+            height: 100vh; overflow: hidden; display: flex; flex-direction: column;
         }
 
         header {
-            height: 40px;
-            background-color: #1f2937;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: space-between; /* タイトルと戻るボタン用 */
-            padding: 0 16px;
-            font-size: 14px;
-            font-weight: bold;
-            flex-shrink: 0;
+            height: 40px; background-color: #1f2937; color: white;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px; font-size: 14px; font-weight: bold; flex-shrink: 0;
         }
 
-        /* 画面切り替え用クラス */
         .screen {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
+            flex: 1; display: flex; flex-direction: column; overflow: hidden;
+            width: 100%; height: 100%;
         }
         .hidden { display: none !important; }
 
-        /* --- 測定画面のスタイル --- */
+        /* --- 測定画面 --- */
         #athletes-container {
-            flex: 1;
-            display: flex;
-            overflow-x: auto;
-            overflow-y: hidden;
-            background-color: var(--bg-color);
-            padding-bottom: 80px; 
+            flex: 1; display: flex; overflow-x: auto; overflow-y: hidden;
+            background-color: var(--bg-color); padding-bottom: 80px; 
         }
 
         .stopwatch-card {
-            flex: 0 0 320px;
-            background-color: var(--card-bg);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            padding: 12px;
-            position: relative;
-            box-sizing: border-box;
-            height: 100%;
+            flex: 0 0 320px; background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color); display: flex;
+            flex-direction: column; padding: 12px; position: relative;
+            box-sizing: border-box; height: 100%;
         }
 
         .delete-btn {
@@ -163,51 +137,57 @@
         .g-start { background-color: #16a34a; }
         .g-lap { background-color: #2563eb; }
         .g-stop { background-color: #dc2626; }
-        .g-finish { background-color: var(--orange); } /* 測定終了ボタン */
+        .g-finish { background-color: var(--orange); }
 
-        /* --- 編集画面のスタイル --- */
+        /* --- 編集画面 (スプレッドシート風) --- */
         #edit-screen {
-            background-color: var(--bg-color);
-            padding: 20px;
-            box-sizing: border-box;
+            background-color: var(--bg-color); padding: 10px; box-sizing: border-box;
         }
 
         .edit-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            height: 100%;
+            width: 100%; height: 100%; background: white; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column;
+            overflow: hidden;
         }
 
-        h2 { margin-top: 0; color: var(--text-main); font-size: 18px; }
-        p { color: #666; font-size: 13px; margin-bottom: 10px; }
-
-        textarea {
-            flex: 1;
-            width: 100%;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            resize: none;
-            box-sizing: border-box;
-            margin-bottom: 20px;
+        .sheet-header {
+            padding: 10px; border-bottom: 1px solid #ddd;
+            display: flex; justify-content: space-between; align-items: center;
         }
+        .sheet-header h2 { margin: 0; font-size: 16px; }
+
+        /* スプレッドシート本体 */
+        .spreadsheet-wrapper {
+            flex: 1; overflow: auto; padding: 10px;
+        }
+
+        .spreadsheet-table {
+            border-collapse: collapse; width: max-content; /* 中身に合わせて広がる */
+        }
+        .spreadsheet-table th, .spreadsheet-table td {
+            border: 1px solid #ccc; padding: 0; min-width: 80px;
+        }
+        .spreadsheet-table th {
+            background-color: #f3f4f6; padding: 8px; font-size: 12px;
+            text-align: center; position: sticky; top: 0; z-index: 10;
+        }
+        .spreadsheet-table input {
+            width: 100%; height: 100%; border: none; padding: 8px;
+            box-sizing: border-box; font-family: monospace; font-size: 14px;
+            text-align: center;
+        }
+        .spreadsheet-table input:focus {
+            background-color: #eff6ff; outline: 2px solid var(--blue); z-index: 5;
+        }
+        
+        /* 選手名ヘッダーの強調 */
+        .th-name { background-color: #e5e7eb; font-weight: bold; font-size: 14px; }
 
         .edit-actions {
-            display: flex;
-            gap: 10px;
-            height: 50px;
+            display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ddd;
         }
 
-        .btn-copy { background-color: var(--purple); color: white; flex: 2; font-size: 16px; }
+        .btn-copy { background-color: #107c41; /* Excel Green */ color: white; flex: 2; font-size: 16px; }
         .btn-back { background-color: #6b7280; color: white; flex: 1; font-size: 16px; }
 
     </style>
@@ -235,12 +215,18 @@
 
 <div id="edit-screen" class="screen hidden">
     <div class="edit-container">
-        <h2>結果の編集と書き出し</h2>
-        <p>テキストは自由に編集できます。編集後にコピーボタンを押してください。</p>
-        <textarea id="result-textarea"></textarea>
+        <div class="sheet-header">
+            <h2 id="result-title">計測結果</h2>
+        </div>
+        
+        <div class="spreadsheet-wrapper">
+            <table class="spreadsheet-table" id="result-table">
+                </table>
+        </div>
+
         <div class="edit-actions">
             <button class="btn-back" onclick="backToMeasurement()">戻る</button>
-            <button class="btn-copy" onclick="copyResults()">クリップボードにコピー</button>
+            <button class="btn-copy" onclick="copySpreadsheet()">Excel形式でコピー</button>
         </div>
     </div>
 </div>
@@ -260,19 +246,14 @@
     class Stopwatch {
         constructor(id) {
             this.id = id;
-            this.startTime = 0; 
-            this.elapsedSaved = 0; 
-            this.isRunning = false;
-            this.animationFrame = null;
-            this.laps = [];
-            this.currentLapStart = 0; 
+            this.startTime = 0; this.elapsedSaved = 0; this.isRunning = false;
+            this.animationFrame = null; this.laps = []; this.currentLapStart = 0; 
 
             this.element = document.createElement('div');
             this.element.className = 'stopwatch-card';
             this.element.id = `athlete-${id}`;
             this.render();
             
-            // DOM要素取得
             this.nameInput = this.element.querySelector('.name-input');
             this.totalTimeDisplay = this.element.querySelector('.main-time');
             this.currentLapDisplay = this.element.querySelector('.current-lap');
@@ -393,12 +374,10 @@
             this.tbody.innerHTML = "";
         }
 
-        getName() {
-            return this.nameInput.value || `選手 ${this.id}`;
-        }
+        getName() { return this.nameInput.value || `選手 ${this.id}`; }
     }
 
-    // --- グローバル管理関数 ---
+    // --- グローバル関数 ---
 
     function getAthlete(id) { return athletes.find(a => a.id === id); }
 
@@ -431,68 +410,139 @@
     function stopAll() { athletes.forEach(a => a.stop()); }
     function lapAll() { athletes.forEach(a => a.lap()); }
 
-    // --- 画面遷移ロジック ---
+    // --- 編集・スプレッドシート機能 ---
 
-    // 1. 測定終了ボタン
     function finishMeasurement() {
         if(confirm("測定を終了して、結果編集画面へ移動しますか？\n（動いているタイマーは全て停止します）")) {
-            // 全停止
             stopAll();
             
-            // 画面切り替え
+            // 現在の日付をタイトルに
+            const today = new Date();
+            const dateStr = `${today.getMonth()+1}月${today.getDate()}日`;
+            document.getElementById('result-title').textContent = `${dateStr} ラン計測結果`;
+
             document.getElementById('measurement-screen').classList.add('hidden');
             document.getElementById('edit-screen').classList.remove('hidden');
-            
-            // 結果をテキストエリアに生成
-            generateResultText();
+            generateSpreadsheet();
         }
     }
 
-    // 2. 戻るボタン
     function backToMeasurement() {
         document.getElementById('edit-screen').classList.add('hidden');
         document.getElementById('measurement-screen').classList.remove('hidden');
     }
 
-    // 3. テキスト生成
-    function generateResultText() {
-        let text = "【ラン計測結果】\n\n";
+    function generateSpreadsheet() {
+        const table = document.getElementById('result-table');
+        table.innerHTML = ""; // クリア
+
+        // 1. ヘッダー行の作成
+        const thead = document.createElement('thead');
         
+        // 1行目: 選手名 (空セル + 名前 + 空セル...)
+        const rowNames = document.createElement('tr');
+        rowNames.appendChild(document.createElement('th')); // 左上の空き
+        
+        // 2行目: 項目名 (LapNo + Split + Total...)
+        const rowLabels = document.createElement('tr');
+        const thLap = document.createElement('th');
+        thLap.textContent = "Lap";
+        rowLabels.appendChild(thLap);
+
         athletes.forEach(a => {
-            text += `■ ${a.getName()}\n`;
-            const sortedLaps = [...a.laps].reverse();
-            
-            if (sortedLaps.length === 0) {
-                text += " データなし\n";
-            } else {
-                sortedLaps.forEach(lap => {
-                    text += `${lap.count}lap: ${formatTime(lap.split)} (Total ${formatTime(lap.total)})\n`;
-                });
-            }
-            text += "\n";
+            // 選手名セル (2列分結合)
+            const thName = document.createElement('th');
+            thName.colSpan = 2;
+            thName.className = 'th-name';
+            thName.innerHTML = `<input value="${a.getName()}" style="font-weight:bold; background:transparent;">`;
+            rowNames.appendChild(thName);
+
+            // 項目セル
+            const thSplit = document.createElement('th'); thSplit.textContent = "Split";
+            const thTotal = document.createElement('th'); thTotal.textContent = "Total";
+            rowLabels.appendChild(thSplit);
+            rowLabels.appendChild(thTotal);
         });
 
-        // テキストエリアに挿入
-        document.getElementById('result-textarea').value = text;
+        thead.appendChild(rowNames);
+        thead.appendChild(rowLabels);
+        table.appendChild(thead);
+
+        // 2. ボディ行（データ）の作成
+        const tbody = document.createElement('tbody');
+        
+        // 最大ラップ数を探す
+        let maxLaps = 0;
+        athletes.forEach(a => { if(a.laps.length > maxLaps) maxLaps = a.laps.length; });
+
+        // ラップの数だけループ（1周目から順に）
+        for (let i = 1; i <= maxLaps; i++) {
+            const row = document.createElement('tr');
+            
+            // 左端のラップ番号
+            const tdNo = document.createElement('td');
+            tdNo.style.backgroundColor = "#f9fafb";
+            tdNo.innerHTML = `<input value="${i}Lap" readonly style="background:#f9fafb; color:#888;">`;
+            row.appendChild(tdNo);
+
+            // 各選手のデータ
+            athletes.forEach(a => {
+                // laps配列はunshiftで逆順に入っているので、正順(i番目)を取得するには工夫が必要
+                // array index は 0始まり。ラップ1は配列の末尾(length-1)
+                // 単純化のため、lapsをコピーしてreverseした一時配列を使う
+                const orderedLaps = [...a.laps].reverse();
+                const lapData = orderedLaps[i-1]; // i番目のラップ
+
+                const tdSplit = document.createElement('td');
+                const tdTotal = document.createElement('td');
+
+                if (lapData) {
+                    tdSplit.innerHTML = `<input value="${formatTime(lapData.split)}">`;
+                    tdTotal.innerHTML = `<input value="${formatTime(lapData.total)}">`;
+                } else {
+                    tdSplit.innerHTML = `<input value="">`; // データなし
+                    tdTotal.innerHTML = `<input value="">`;
+                }
+                row.appendChild(tdSplit);
+                row.appendChild(tdTotal);
+            });
+
+            tbody.appendChild(row);
+        }
+        table.appendChild(tbody);
     }
 
-    // 4. コピー実行
-    async function copyResults() {
-        const textArea = document.getElementById('result-textarea');
+    // Excel互換のTSV形式でコピー
+    async function copySpreadsheet() {
+        const table = document.getElementById('result-table');
+        let tsv = "";
+
+        // 行ごとに処理
+        for (const row of table.rows) {
+            let rowData = [];
+            for (const cell of row.cells) {
+                // inputがある場合はその値を、なければinnerTextを使う
+                const input = cell.querySelector('input');
+                let val = input ? input.value : cell.innerText;
+                
+                // Excel貼り付け用に余計な改行などを除去
+                val = val.replace(/(\r\n|\n|\r)/gm, "").trim();
+                rowData.push(val);
+            }
+            // タブ区切りで結合
+            tsv += rowData.join("\t") + "\n";
+        }
+
         try {
-            // テキストエリアの内容をクリップボードへ
-            await navigator.clipboard.writeText(textArea.value);
-            alert("コピーしました！");
+            await navigator.clipboard.writeText(tsv);
+            alert("コピーしました！\nExcelやスプレッドシートのA1セルを選択して貼り付けてください。");
         } catch (err) {
             alert("コピーに失敗しました...");
         }
     }
 
-    // 初期化
     window.onload = () => {
-        addAthlete();
-        addAthlete();
-        addAthlete();
+        addAthlete(); addAthlete(); addAthlete();
     };
 </script>
 
