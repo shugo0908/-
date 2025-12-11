@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Triathlon Manager - Run v4</title>
+    <title>Triathlon Manager - Run v5</title>
     <style>
         /* --- デザイン設定 --- */
         :root {
@@ -17,6 +17,8 @@
             --gray: #9ca3af;
             --purple: #8b5cf6;
             --orange: #f97316;
+            --gap-red: #dc2626;   /* 遅れ用 */
+            --gap-blue: #2563eb;  /* 先行用 */
         }
 
         body {
@@ -56,13 +58,27 @@
         }
         .delete-btn:hover { color: var(--red); }
 
+        /* 名前入力 */
         .name-input {
-            font-size: 20px; font-weight: bold; text-align: center; border: none;
-            border-bottom: 2px solid var(--border-color); width: 80%;
-            margin: 0 auto 10px auto; padding: 4px; outline: none;
+            font-size: 18px; font-weight: bold; text-align: center; border: none;
+            border-bottom: 2px solid var(--border-color); width: 90%;
+            margin: 0 auto 4px auto; padding: 4px; outline: none;
         }
         .name-input:focus { border-color: var(--blue); }
 
+        /* ターゲット入力エリア */
+        .target-wrapper {
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 10px; gap: 5px;
+        }
+        .target-label { font-size: 11px; color: #666; font-weight: bold; }
+        .target-input {
+            width: 80px; text-align: center; font-family: monospace; font-size: 14px;
+            padding: 2px; border: 1px solid #ddd; border-radius: 4px; background: #f9fafb;
+        }
+        .target-input:focus { border-color: var(--blue); background: white; outline: none; }
+
+        /* 時間表示エリア */
         .time-display-area {
             background-color: #f9fafb; border-radius: 8px; padding: 10px;
             text-align: center; margin-bottom: 12px;
@@ -71,19 +87,25 @@
 
         .main-time-label { font-size: 10px; color: var(--gray); font-weight: bold; }
         .main-time {
-            font-family: monospace; font-size: 36px; font-weight: bold;
-            color: var(--text-main); letter-spacing: 1px; margin: 4px 0 12px 0;
+            font-family: monospace; font-size: 32px; font-weight: bold;
+            color: var(--text-main); letter-spacing: 1px; margin: 2px 0 8px 0;
         }
 
         .sub-times { display: flex; gap: 8px; }
         .sub-time-box {
             flex: 1; background: white; border: 1px solid var(--border-color);
             border-radius: 4px; padding: 4px;
+            display: flex; flex-direction: column; justify-content: center;
         }
-        .sub-label { font-size: 9px; font-weight: bold; text-transform: uppercase; }
-        .sub-time { font-family: monospace; font-size: 18px; font-weight: bold; }
+        .sub-label { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #666; }
+        .sub-time { font-family: monospace; font-size: 16px; font-weight: bold; }
 
-        .text-blue { color: #1e40af; } .text-green { color: #166534; }
+        /* GAP表示用 */
+        .gap-display {
+            font-size: 12px; font-weight: bold; margin-top: 2px;
+        }
+        .gap-plus { color: var(--gap-red); }
+        .gap-minus { color: var(--gap-blue); }
 
         .controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
         .row-btns { display: flex; gap: 8px; height: 40px; }
@@ -108,7 +130,10 @@
         th { background-color: #f3f4f6; padding: 6px; font-size: 11px; color: var(--gray); position: sticky; top: 0; }
         td { padding: 4px; border-bottom: 1px solid #e5e7eb; color: var(--text-main); }
         .mono { font-family: monospace; }
-        .lap-split { font-weight: bold; color: #1e40af; }
+        .lap-split { font-weight: bold; color: #1f2937; }
+        
+        /* リスト内のGAP */
+        .list-gap { font-size: 10px; margin-left: 4px; }
 
         #add-btn-area {
             flex: 0 0 100px; display: flex; align-items: center; justify-content: center;
@@ -139,7 +164,7 @@
         .g-stop { background-color: #dc2626; }
         .g-finish { background-color: var(--orange); }
 
-        /* --- 編集画面 (スプレッドシート風) --- */
+        /* --- 編集画面 --- */
         #edit-screen {
             background-color: var(--bg-color); padding: 10px; box-sizing: border-box;
         }
@@ -156,38 +181,22 @@
         }
         .sheet-header h2 { margin: 0; font-size: 16px; }
 
-        /* スプレッドシート本体 */
-        .spreadsheet-wrapper {
-            flex: 1; overflow: auto; padding: 10px;
-        }
-
-        .spreadsheet-table {
-            border-collapse: collapse; width: max-content; /* 中身に合わせて広がる */
-        }
-        .spreadsheet-table th, .spreadsheet-table td {
-            border: 1px solid #ccc; padding: 0; min-width: 80px;
-        }
+        .spreadsheet-wrapper { flex: 1; overflow: auto; padding: 10px; }
+        .spreadsheet-table { border-collapse: collapse; width: max-content; }
+        .spreadsheet-table th, .spreadsheet-table td { border: 1px solid #ccc; padding: 0; min-width: 60px; }
         .spreadsheet-table th {
             background-color: #f3f4f6; padding: 8px; font-size: 12px;
             text-align: center; position: sticky; top: 0; z-index: 10;
         }
         .spreadsheet-table input {
             width: 100%; height: 100%; border: none; padding: 8px;
-            box-sizing: border-box; font-family: monospace; font-size: 14px;
-            text-align: center;
+            box-sizing: border-box; font-family: monospace; font-size: 13px; text-align: center;
         }
-        .spreadsheet-table input:focus {
-            background-color: #eff6ff; outline: 2px solid var(--blue); z-index: 5;
-        }
-        
-        /* 選手名ヘッダーの強調 */
-        .th-name { background-color: #e5e7eb; font-weight: bold; font-size: 14px; }
+        .spreadsheet-table input:focus { background-color: #eff6ff; outline: 2px solid var(--blue); z-index: 5; }
+        .th-name { background-color: #e5e7eb; font-weight: bold; }
 
-        .edit-actions {
-            display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ddd;
-        }
-
-        .btn-copy { background-color: #107c41; /* Excel Green */ color: white; flex: 2; font-size: 16px; }
+        .edit-actions { display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ddd; }
+        .btn-copy { background-color: #107c41; color: white; flex: 2; font-size: 16px; }
         .btn-back { background-color: #6b7280; color: white; flex: 1; font-size: 16px; }
 
     </style>
@@ -195,7 +204,7 @@
 <body>
 
 <header>
-    <span>Triathlon Manager - Run</span>
+    <span>Run Manager v5 (Target & Gap)</span>
 </header>
 
 <div id="measurement-screen" class="screen">
@@ -235,12 +244,48 @@
     let athletes = [];
     let nextId = 1;
 
+    // mm:ss.ms 形式
     function formatTime(ms) {
         if (ms === 0) return "00:00.00";
-        const minutes = Math.floor(ms / 60000);
-        const seconds = Math.floor((ms % 60000) / 1000);
-        const milliseconds = Math.floor((ms % 1000) / 10);
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+        const minutes = Math.floor(Math.abs(ms) / 60000);
+        const seconds = Math.floor((Math.abs(ms) % 60000) / 1000);
+        const milliseconds = Math.floor((Math.abs(ms) % 1000) / 10);
+        
+        const sign = ms < 0 ? "-" : "";
+        return `${sign}${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+    }
+
+    // GAP表示用 (+01.50 など)
+    function formatGap(ms) {
+        const sign = ms > 0 ? "+" : "-"; // 遅れがプラス、先行がマイナス
+        const absMs = Math.abs(ms);
+        const seconds = Math.floor(absMs / 1000);
+        const milliseconds = Math.floor((absMs % 1000) / 10);
+        return `${sign}${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+    }
+
+    // 入力された文字列（"80" や "1:20"）をミリ秒に変換
+    function parseTargetInput(str) {
+        if (!str) return null;
+        // 全角数字を半角に
+        str = str.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        
+        if (str.includes(":")) {
+            // mm:ss 形式
+            const parts = str.split(":");
+            if (parts.length === 2) {
+                const m = parseInt(parts[0]) || 0;
+                const s = parseInt(parts[1]) || 0;
+                return (m * 60 + s) * 1000;
+            }
+        } else {
+            // 秒数のみ (例: 78)
+            const s = parseInt(str);
+            if (!isNaN(s)) {
+                return s * 1000;
+            }
+        }
+        return null;
     }
 
     class Stopwatch {
@@ -254,10 +299,13 @@
             this.element.id = `athlete-${id}`;
             this.render();
             
+            // DOM要素取得
             this.nameInput = this.element.querySelector('.name-input');
+            this.targetInput = this.element.querySelector('.target-input'); // ターゲット入力
             this.totalTimeDisplay = this.element.querySelector('.main-time');
             this.currentLapDisplay = this.element.querySelector('.current-lap');
             this.lastLapDisplay = this.element.querySelector('.last-lap');
+            this.gapDisplay = this.element.querySelector('.gap-display'); // GAP表示
             this.startStopBtn = this.element.querySelector('.btn-toggle');
             this.lapBtn = this.element.querySelector('.btn-lap');
             this.tbody = this.element.querySelector('tbody');
@@ -268,17 +316,23 @@
                 <button class="delete-btn" onclick="removeAthlete(${this.id})">×</button>
                 <input type="text" class="name-input" placeholder="氏名" value="選手 ${this.id}">
                 
+                <div class="target-wrapper">
+                    <span class="target-label">Target:</span>
+                    <input type="text" class="target-input" placeholder="例: 78, 1:18">
+                </div>
+
                 <div class="time-display-area">
                     <div class="main-time-label">TOTAL TIME</div>
                     <div class="main-time">00:00.00</div>
                     <div class="sub-times">
                         <div class="sub-time-box">
-                            <div class="sub-label text-blue">Current Lap</div>
-                            <div class="sub-time current-lap text-blue">00:00.00</div>
+                            <span class="sub-label">Current Lap</span>
+                            <span class="sub-time current-lap text-blue">00:00.00</span>
                         </div>
                         <div class="sub-time-box">
-                            <div class="sub-label text-green">Last Lap</div>
-                            <div class="sub-time last-lap text-green">00:00.00</div>
+                            <span class="sub-label">Last Lap & Gap</span>
+                            <span class="sub-time last-lap text-green">00:00.00</span>
+                            <span class="gap-display">--</span>
                         </div>
                     </div>
                 </div>
@@ -296,7 +350,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>SPLIT</th>
+                                <th>SPLIT (Gap)</th>
                                 <th>TOTAL</th>
                             </tr>
                         </thead>
@@ -343,20 +397,47 @@
             const totalTime = this.elapsedSaved + (now - this.startTime);
             const splitTime = totalTime - this.currentLapStart;
 
+            // ターゲットタイムとの差を計算
+            let gapMs = null;
+            const targetMs = parseTargetInput(this.targetInput.value);
+            if (targetMs) {
+                gapMs = splitTime - targetMs; // プラスなら遅い、マイナスなら速い
+            }
+
             const lapData = {
                 count: this.laps.length + 1,
                 split: splitTime,
-                total: totalTime
+                total: totalTime,
+                gap: gapMs
             };
             this.laps.unshift(lapData);
 
+            // 表示更新
             this.lastLapDisplay.textContent = formatTime(splitTime);
+            
+            // GAP表示更新
+            if (gapMs !== null) {
+                const gapStr = formatGap(gapMs);
+                this.gapDisplay.textContent = gapStr;
+                this.gapDisplay.className = gapMs > 0 ? "gap-display gap-plus" : "gap-display gap-minus";
+            } else {
+                this.gapDisplay.textContent = "--";
+                this.gapDisplay.className = "gap-display";
+            }
+
             this.currentLapStart = totalTime;
 
+            // リストに追加
             const row = document.createElement('tr');
+            let gapHtml = "";
+            if (gapMs !== null) {
+                const colorClass = gapMs > 0 ? "gap-plus" : "gap-minus";
+                gapHtml = `<span class="list-gap ${colorClass}">(${formatGap(gapMs)})</span>`;
+            }
+
             row.innerHTML = `
                 <td class="mono" style="color:#9ca3af;">${lapData.count}</td>
-                <td class="mono lap-split">${formatTime(lapData.split)}</td>
+                <td class="mono lap-split">${formatTime(lapData.split)} ${gapHtml}</td>
                 <td class="mono" style="color:#6b7280;">${formatTime(lapData.total)}</td>
             `;
             this.tbody.prepend(row);
@@ -371,6 +452,7 @@
             this.totalTimeDisplay.textContent = "00:00.00";
             this.currentLapDisplay.textContent = "00:00.00";
             this.lastLapDisplay.textContent = "00:00.00";
+            this.gapDisplay.textContent = "--";
             this.tbody.innerHTML = "";
         }
 
@@ -410,17 +492,14 @@
     function stopAll() { athletes.forEach(a => a.stop()); }
     function lapAll() { athletes.forEach(a => a.lap()); }
 
-    // --- 編集・スプレッドシート機能 ---
+    // --- 編集・書き出し機能 ---
 
     function finishMeasurement() {
-        if(confirm("測定を終了して、結果編集画面へ移動しますか？\n（動いているタイマーは全て停止します）")) {
+        if(confirm("測定を終了して、結果編集画面へ移動しますか？")) {
             stopAll();
-            
-            // 現在の日付をタイトルに
             const today = new Date();
             const dateStr = `${today.getMonth()+1}月${today.getDate()}日`;
             document.getElementById('result-title').textContent = `${dateStr} ラン計測結果`;
-
             document.getElementById('measurement-screen').classList.add('hidden');
             document.getElementById('edit-screen').classList.remove('hidden');
             generateSpreadsheet();
@@ -434,110 +513,93 @@
 
     function generateSpreadsheet() {
         const table = document.getElementById('result-table');
-        table.innerHTML = ""; // クリア
+        table.innerHTML = ""; 
 
-        // 1. ヘッダー行の作成
+        // ヘッダー生成
         const thead = document.createElement('thead');
-        
-        // 1行目: 選手名 (空セル + 名前 + 空セル...)
         const rowNames = document.createElement('tr');
-        rowNames.appendChild(document.createElement('th')); // 左上の空き
-        
-        // 2行目: 項目名 (LapNo + Split + Total...)
+        rowNames.appendChild(document.createElement('th')); 
         const rowLabels = document.createElement('tr');
-        const thLap = document.createElement('th');
-        thLap.textContent = "Lap";
-        rowLabels.appendChild(thLap);
+        rowLabels.appendChild(document.createElement('th')); 
+        rowLabels.lastChild.textContent = "Lap";
 
         athletes.forEach(a => {
-            // 選手名セル (2列分結合)
+            // 名前 (3列結合: Split, Gap, Total)
             const thName = document.createElement('th');
-            thName.colSpan = 2;
+            thName.colSpan = 3;
             thName.className = 'th-name';
             thName.innerHTML = `<input value="${a.getName()}" style="font-weight:bold; background:transparent;">`;
             rowNames.appendChild(thName);
 
-            // 項目セル
-            const thSplit = document.createElement('th'); thSplit.textContent = "Split";
+            const thSplit = document.createElement('th'); thSplit.textContent = "Time";
+            const thGap = document.createElement('th'); thGap.textContent = "Gap";
             const thTotal = document.createElement('th'); thTotal.textContent = "Total";
             rowLabels.appendChild(thSplit);
+            rowLabels.appendChild(thGap);
             rowLabels.appendChild(thTotal);
         });
-
         thead.appendChild(rowNames);
         thead.appendChild(rowLabels);
         table.appendChild(thead);
 
-        // 2. ボディ行（データ）の作成
+        // データ生成
         const tbody = document.createElement('tbody');
-        
-        // 最大ラップ数を探す
         let maxLaps = 0;
         athletes.forEach(a => { if(a.laps.length > maxLaps) maxLaps = a.laps.length; });
 
-        // ラップの数だけループ（1周目から順に）
         for (let i = 1; i <= maxLaps; i++) {
             const row = document.createElement('tr');
             
-            // 左端のラップ番号
             const tdNo = document.createElement('td');
-            tdNo.style.backgroundColor = "#f9fafb";
-            tdNo.innerHTML = `<input value="${i}Lap" readonly style="background:#f9fafb; color:#888;">`;
+            tdNo.innerHTML = `<input value="${i}" readonly style="background:#f9fafb; color:#888;">`;
             row.appendChild(tdNo);
 
-            // 各選手のデータ
             athletes.forEach(a => {
-                // laps配列はunshiftで逆順に入っているので、正順(i番目)を取得するには工夫が必要
-                // array index は 0始まり。ラップ1は配列の末尾(length-1)
-                // 単純化のため、lapsをコピーしてreverseした一時配列を使う
                 const orderedLaps = [...a.laps].reverse();
-                const lapData = orderedLaps[i-1]; // i番目のラップ
+                const lapData = orderedLaps[i-1]; 
 
                 const tdSplit = document.createElement('td');
+                const tdGap = document.createElement('td');
                 const tdTotal = document.createElement('td');
 
                 if (lapData) {
                     tdSplit.innerHTML = `<input value="${formatTime(lapData.split)}">`;
+                    // Gapがあれば表示
+                    const gapVal = lapData.gap !== null ? formatGap(lapData.gap) : "";
+                    tdGap.innerHTML = `<input value="${gapVal}" style="color:${lapData.gap > 0 ? 'red':'blue'}">`;
                     tdTotal.innerHTML = `<input value="${formatTime(lapData.total)}">`;
                 } else {
-                    tdSplit.innerHTML = `<input value="">`; // データなし
+                    tdSplit.innerHTML = `<input value="">`;
+                    tdGap.innerHTML = `<input value="">`;
                     tdTotal.innerHTML = `<input value="">`;
                 }
                 row.appendChild(tdSplit);
+                row.appendChild(tdGap);
                 row.appendChild(tdTotal);
             });
-
             tbody.appendChild(row);
         }
         table.appendChild(tbody);
     }
 
-    // Excel互換のTSV形式でコピー
     async function copySpreadsheet() {
         const table = document.getElementById('result-table');
         let tsv = "";
-
-        // 行ごとに処理
         for (const row of table.rows) {
             let rowData = [];
             for (const cell of row.cells) {
-                // inputがある場合はその値を、なければinnerTextを使う
                 const input = cell.querySelector('input');
                 let val = input ? input.value : cell.innerText;
-                
-                // Excel貼り付け用に余計な改行などを除去
                 val = val.replace(/(\r\n|\n|\r)/gm, "").trim();
                 rowData.push(val);
             }
-            // タブ区切りで結合
             tsv += rowData.join("\t") + "\n";
         }
-
         try {
             await navigator.clipboard.writeText(tsv);
-            alert("コピーしました！\nExcelやスプレッドシートのA1セルを選択して貼り付けてください。");
+            alert("コピーしました！");
         } catch (err) {
-            alert("コピーに失敗しました...");
+            alert("コピー失敗");
         }
     }
 
